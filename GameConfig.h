@@ -45,7 +45,7 @@ struct GameConfig {
 
     // Particle parameters
     static const int MAX_PARTICLES          = 30;  // Total size of the particle object pool
-    static const int PARTICLE_LIFESPAN_MS   = 400; // How long a fragment glows before burning out
+    static const int PARTICLE_LIFESPAN_MS   = 600; // How long a fragment glows before burning out
 
     // Asset Animations
     static const int SHIP_ANIM_SPEED_MS      = 80;

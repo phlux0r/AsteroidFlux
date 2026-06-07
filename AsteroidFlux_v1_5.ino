@@ -107,7 +107,6 @@ void loop() {
     asteroids.update(ship, score, asteroidsPassed, nextTargetScore, uiNeedsUpdate, playerHit, audio, particles);
 
     if (playerHit) {
-        particles.clearAll();
         triggerShipExplosion();
         lives--;
         delay(300);
@@ -118,6 +117,7 @@ void loop() {
             tft.fillScreen(ST7735_BLACK);
             drawUI();
             asteroids.forceBoardWipe();
+            particles.clearAll();
             runCountdown();
             return;
         }
@@ -215,45 +215,45 @@ void runCountdown() {
 }
 
 void triggerShipExplosion() {
-    int centerX = (int)ship.getX() + (GameConfig::SHIP_WIDTH / 2);
-    int centerY = ship.getY() + (GameConfig::SHIP_HEIGHT / 2);
-    unsigned int audioPointer = 44;
+    // 1. Calculate the exact center boundary of the ship
+    float centerX = ship.getX() + (GameConfig::SHIP_WIDTH / 2.0f);
+    float centerY = (float)ship.getY() + (GameConfig::SHIP_HEIGHT / 2.0f);
+    unsigned int audioPointer = 44; // Skip the WAV header safely
+
+    // 2. Trigger a massive particle dispersion matching the ship's ion-blue theme
+    // We break the pool limits slightly here or fill it to max capacity
+    particles.spawnExplosion(centerX, centerY, GameConfig::COLOR_ION_BLUE, 20);
+    particles.spawnExplosion(centerX, centerY, ST7735_YELLOW, 10);
 
     sigmaDeltaAttach(GameConfig::PIN_SPEAKER, 312500);
 
-    for (int frame = 1; frame <= 6; frame++) {
-        int innerRadius = frame * 3;
-        int outerRadius = frame * 7;
-        uint16_t primaryColor = (frame % 2 == 0) ? ST7735_WHITE : ST7735_YELLOW;
-        uint16_t secondaryColor = (frame % 2 == 0) ? ST7735_YELLOW : ST7735_WHITE;
+    // Run a 6-frame rendering sequence matching your original animation timing
+    for (int frame = 1; frame <= 12; frame++) {
+        
+        // 3. CRITICAL ENGINE STEP: Advance the particle physics and erase the canvas background
+        particles.update();
+        canvas.fillRect(0, GameConfig::UI_MARGIN_TOP, GameConfig::SCREEN_WIDTH, GameConfig::SCREEN_HEIGHT - GameConfig::UI_MARGIN_TOP, ST7735_BLACK);
+        
+        // 4. Render the flying ship debris onto the virtual buffer canvas
+        particles.render(canvas);
 
-        canvas.drawLine(centerX, centerY - innerRadius, centerX, centerY - outerRadius, primaryColor);
-        canvas.drawLine(centerX, centerY + innerRadius, centerX, centerY + outerRadius, primaryColor);
-        canvas.drawLine(centerX - innerRadius, centerY, centerX - outerRadius, centerY, primaryColor);
-        canvas.drawLine(centerX + innerRadius, centerY, centerX + outerRadius, centerY, primaryColor);
-
-        int diagInner = (int)(innerRadius * 0.71f);
-        int diagOuter = (int)(outerRadius * 0.71f);
-        canvas.drawLine(centerX - diagInner, centerY - diagInner, centerX - diagOuter, centerY - diagOuter, secondaryColor);
-        canvas.drawLine(centerX + diagInner, centerY - diagInner, centerX + diagOuter, centerY - diagOuter, secondaryColor);
-        canvas.drawLine(centerX - diagInner, centerY + diagInner, centerX - diagOuter, centerY + diagOuter, secondaryColor);
-        canvas.drawLine(centerX + diagInner, centerY + diagInner, centerX + diagOuter, centerY + diagOuter, secondaryColor);
-
+        // Output the updated canvas frame to the hardware display screen
         tft.drawRGBBitmap(0, 0, canvas.getBuffer(), GameConfig::SCREEN_WIDTH, GameConfig::SCREEN_HEIGHT);
 
+        // 5. Keep the precise timing block for raw PCM audio data streaming
+        // This loops 320 times per frame to maintain the correct sample rate pitch
         for (int sampleCount = 0; sampleCount < 320; sampleCount++) {
             if (audioPointer < sound_explosion_len) {
                 uint8_t audioSample = pgm_read_byte(&explosion_data[audioPointer++]);
                 sigmaDeltaWrite(GameConfig::PIN_SPEAKER, audioSample); 
             } else {
-                sigmaDeltaWrite(GameConfig::PIN_SPEAKER, 128);
+                sigmaDeltaWrite(GameConfig::PIN_SPEAKER, 128); // Static baseline balance
             }
-            delayMicroseconds(125); 
+            delayMicroseconds(125); // 8kHz clock interval constraint
         }
-
-        canvas.fillRect(0, GameConfig::UI_MARGIN_TOP, GameConfig::SCREEN_WIDTH, GameConfig::SCREEN_HEIGHT - GameConfig::UI_MARGIN_TOP, ST7735_BLACK);
     }
 
+    // 6. Safe Hardware Shutdown
     sigmaDeltaWrite(GameConfig::PIN_SPEAKER, 0);
     sigmaDeltaDetach(GameConfig::PIN_SPEAKER);
     pinMode(GameConfig::PIN_SPEAKER, OUTPUT);
