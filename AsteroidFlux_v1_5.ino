@@ -9,6 +9,7 @@
 #include "PlayerShip.h"
 #include "PowerUpManager.h"
 #include "AsteroidManager.h"
+#include "BackgroundStars.h"
 
 // Binary Memory Assets
 #include "splash_image.h"
@@ -26,6 +27,7 @@ AudioEngine audio;
 PlayerShip ship;
 PowerUpManager powerUps;
 AsteroidManager asteroids;
+BackgroundStars background;
 
 // Shared Game Core State Variables
 int score = 0;
@@ -90,12 +92,13 @@ void loop() {
 
     // Run Engine Object Steps
     audio.update();
+    background.update();
     ship.updatePosition();
     ship.updateAnimation();
     ship.updateShield();
 
     // Process Background PowerUp Timeline Logic
-    powerUps.update(score, ship, lives, uiNeedsUpdate, audio);
+    powerUps.update(score, ship, lives, uiNeedsUpdate, audio, asteroids);
 
     // Track Hazards Engine Math
     asteroids.update(ship, score, asteroidsPassed, nextTargetScore, uiNeedsUpdate, playerHit, audio);
@@ -120,6 +123,7 @@ void loop() {
     canvas.fillRect(0, GameConfig::UI_MARGIN_TOP, GameConfig::SCREEN_WIDTH, GameConfig::SCREEN_HEIGHT - GameConfig::UI_MARGIN_TOP, ST7735_BLACK);
 
     // Draw Entities onto Virtual Buffer Frame
+    background.render(canvas);
     powerUps.render(canvas);
     asteroids.render(canvas);
     ship.render(canvas);

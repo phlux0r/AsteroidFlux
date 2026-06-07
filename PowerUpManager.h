@@ -6,8 +6,9 @@
 #include "GameConfig.h"
 #include "PlayerShip.h"
 #include "AudioEngine.h"
+#include "AsteroidManager.h" // Linked to access speed controls
 
-enum PowerUpType { NONE, EXTRA_LIFE, SHIELD };
+enum PowerUpType { NONE, EXTRA_LIFE, SHIELD, SLOW_SPEED };
 
 class PowerUpManager {
 private:
@@ -15,6 +16,7 @@ private:
         float x;
         float y;
         float vx;
+        float vy; // Added vertical drift element
         float radius;
         PowerUpType type;
         bool active;
@@ -26,7 +28,7 @@ private:
 
 public:
     PowerUpManager() {
-        _data = {0, 0, 0, 6.0f, NONE, false, 0};
+        _data = {0, 0, 0, 0, 6.0f, NONE, false, 0};
         resetTimeline();
     }
 
@@ -35,37 +37,60 @@ public:
         _nextSpawnTime = millis() + random(GameConfig::POWERUP_SPAWN_LOW_MS, GameConfig::POWERUP_SPAWN_HIGH_MS);
     }
 
-    void update(int score, PlayerShip &ship, int &lives, bool &uiUpdate, AudioEngine &audio) {
+    void update(int score, PlayerShip &ship, int &lives, bool &uiUpdate, AudioEngine &audio, AsteroidManager &asteroids) {
         if (!_data.active && score >= GameConfig::POWERUP_START_SCORE && millis() >= _nextSpawnTime) {
             PowerUpType rolledType = SHIELD;
-            uint16_t rolledColor = ST7735_CYAN;
+            uint16_t rolledColor = GameConfig::COLOR_SHIELD;
 
             int probabilityDice = random(0, 100);
+            
             if (probabilityDice < GameConfig::EXTRA_LIFE_CHANCE) {
                 if (score >= GameConfig::MIN_SCORE_FOR_EXTRA_LIFE) {
                     rolledType = EXTRA_LIFE;
-                    rolledColor = ST7735_MAGENTA; 
+                    rolledColor = GameConfig::COLOR_HEALTH;
                 }
+            } 
+            // Roll check for our brand new Slow Speed module
+            else if (probabilityDice < (GameConfig::EXTRA_LIFE_CHANCE + GameConfig::SLOW_SPEED_CHANCE)) {
+                rolledType = SLOW_SPEED;
+                rolledColor = GameConfig::COLOR_SLOW;
             }
 
             _data.active = true;
             _data.x = GameConfig::SCREEN_WIDTH + 20;
             _data.y = random(20, GameConfig::SCREEN_HEIGHT - 20);
             _data.vx = -1.2f;
+            
+            // Matches asteroid motion physics with random vertical drift vectors
+            _data.vy = (random(-30, 31) / 100.0f); 
+            
             _data.type = rolledType;
             _data.color = rolledColor;
         }
 
         if (!_data.active) return;
 
+        // Apply 2D Physics Vector Movements
         _data.x += _data.vx;
+        _data.y += _data.vy;
 
+        // Screen boundary bounce mechanics (Top UI margin boundary at Y=11)
+        if (_data.y - _data.radius < GameConfig::UI_MARGIN_TOP) {
+            _data.y = GameConfig::UI_MARGIN_TOP + _data.radius;
+            _data.vy = -_data.vy; // Invert movement vector on vertical impact
+        } 
+        else if (_data.y + _data.radius > GameConfig::SCREEN_HEIGHT) {
+            _data.y = GameConfig::SCREEN_HEIGHT - _data.radius;
+            _data.vy = -_data.vy; // Invert movement vector on vertical impact
+        }
+
+        // Garbage collection if scrolled past player boundaries
         if (_data.x + _data.radius < 0) {
             resetTimeline();
             return;
         }
 
-        // Object Oriented Collision Calculations
+        // Bounding Box Collision Calculations
         float shipLeft   = ship.getX();
         float shipRight  = ship.getX() + GameConfig::SHIP_WIDTH;
         float shipTop    = (float)ship.getY();
@@ -87,6 +112,10 @@ public:
             else if (_data.type == SHIELD) {
                 ship.activateShield();
                 audio.playSound(1000, 250);
+            }
+            else if (_data.type == SLOW_SPEED) {
+                asteroids.reduceGameSpeed(); // Dial back the hazard scroll speeds safely
+                audio.playSound(600, 400);   // Deeper satisfying down-tempo chime
             }
             resetTimeline();
         }
@@ -112,6 +141,14 @@ public:
             canvas.fillRoundRect(cx - r, cy - r, w, h, 3, _data.color);
             canvas.drawFastHLine(cx - r + 3, cy, w - 6, ST7735_BLACK);
             canvas.drawFastVLine(cx, cy - r + 3, h - 6, ST7735_BLACK);
+        }
+        else if (_data.type == SLOW_SPEED) {
+            // Draw a Clock/Timer icon for the Slow Speed effect
+            canvas.fillCircle(cx, cy, r, _data.color);
+            canvas.drawCircle(cx, cy, r, ST7735_WHITE);
+            // Hands of the clock
+            canvas.drawLine(cx, cy, cx, cy - r + 3, ST7735_BLACK);
+            canvas.drawLine(cx, cy, cx + r - 3, cy, ST7735_BLACK);
         }
     }
 };

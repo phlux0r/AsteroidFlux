@@ -33,6 +33,15 @@ struct GameConfig {
     static const int EXTRA_LIFE_CHANCE       = 35; // Out of 100
     static const int POWERUP_SPAWN_LOW_MS    = 15000;
     static const int POWERUP_SPAWN_HIGH_MS   = 40000;
+    static const int SLOW_SPEED_CHANCE       = 15; // Out of 100
+    static const uint16_t COLOR_SHIELD       = 0x07E0; // Pure Green
+    static const uint16_t COLOR_HEALTH       = ST7735_MAGENTA;
+    static const uint16_t COLOR_SLOW         = ST7735_CYAN;
+    static const int SPEED_STEPS_TO_REDUCE   = 3;
+
+    // Background stars
+    static const int MAX_STARS              = 16;
+    static constexpr float STAR_SCROLL_SPEED = 0.25f; // Moves much slower than your BASE_SPEED (1.1f)
 
     // Asset Animations
     static const int SHIP_ANIM_SPEED_MS      = 80;

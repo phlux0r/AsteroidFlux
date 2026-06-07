@@ -140,6 +140,13 @@ public:
         }
     }
 
+    void reduceGameSpeed() {
+        _currentSpeed -= (GameConfig::SPEED_STEP * GameConfig::SPEED_STEPS_TO_REDUCE);
+        if (_currentSpeed < GameConfig::BASE_SPEED) {
+            _currentSpeed = GameConfig::BASE_SPEED; // Clamp to baseline minimum
+        }
+    }
+
     void update(PlayerShip &ship, int &score, int &asteroidsPassed, int &nextTargetScore, bool &uiNeedsUpdate, bool &playerHit, AudioEngine &audio) {
         for (int i = 0; i < GameConfig::MAX_ASTEROIDS; i++) {
             if (!_pool[i].active) continue;
