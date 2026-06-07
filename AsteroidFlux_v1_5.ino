@@ -20,6 +20,12 @@ const int MAX_ASTEROIDS = 6;
 const int SCORE_TO_SPAWN = 10;    
 const float BASE_SPEED = 1.1;
 const float SPEED_STEP = 0.07;
+const int POWERUP_START_SCORE = 100;
+const int MIN_SCORE_FOR_EXTRA_LIFE = 600;
+const int SHIELD_DURATION = 10000;
+const int EXTRA_LIFE_CHANCE = 25;
+const int POWERUP_RND_SPWN_LOW = 15000;
+const int POWERUP_RND_SPWN_HIGH = 40000;
 // --- NOTE FREQUENCY DEFINITIONS ---
 #define NOTE_C4  262
 #define NOTE_D4  294
@@ -128,6 +134,26 @@ struct Asteroid {
   float spinSpeed;   // How fast it rotates per frame
 };
 
+// --- POWER-UP CONFIGURATION ---
+enum PowerUpType { NONE, EXTRA_LIFE, SHIELD };
+
+struct PowerUp {
+  float x;
+  float y;
+  float vx;
+  float radius;
+  PowerUpType type;
+  bool active;
+  uint16_t color;
+};
+
+// Global Power-Up Instances
+PowerUp activePowerUp = { 0, 0, 0, 6.0, NONE, false, 0 };
+unsigned long nextPowerUpSpawnTime = random(POWERUP_RND_SPWN_LOW, POWERUP_RND_SPWN_HIGH);
+
+// Shield System Timers
+bool shieldActive = false;
+unsigned long shieldEndTime = 0;
 // --- GLOBAL STATE VARIABLES ---
 int screenWidth, screenHeight;
 int score = 0;
@@ -229,6 +255,11 @@ void initNewGame() {
   currentSpeed = BASE_SPEED;
   cometOnScreen = false; // <-- Clear flag on a brand new game
   nextTargetScore = SCORE_TO_SPAWN; // Reset progression threshold back to 10
+
+  shieldActive = false;
+  activePowerUp.active = false;
+  // CHANGED: Randomize the startup timer for every new life session
+  nextPowerUpSpawnTime = millis() + random(POWERUP_RND_SPWN_LOW, POWERUP_RND_SPWN_HIGH);
 
   for (int i = 0; i < MAX_ASTEROIDS; i++) {
     pool[i].active = (i < currentMaxActive);
@@ -370,6 +401,53 @@ void drawCometTeardrop(Asteroid& ast, uint16_t colorOverride) {
       canvas.drawLine(cx, cy - r, cx + r + 9, cy - 3, 0xCE7F);                  
       canvas.drawLine(cx, cy + r, cx + r + 9, cy + 3, 0xCE7F);                  
     }
+  }
+}
+// --- Powerup UI ---
+void drawPowerUp(PowerUp& p) {
+  if (!p.active) return;
+
+  int cx = (int)p.x;
+  int cy = (int)p.y;
+  int r = (int)p.radius;
+
+  if (cx < -20 || cx > screenWidth + 20) return;
+
+  if (p.type == EXTRA_LIFE) {
+    // --- FILLED ARCADE HEART ---
+    // Draw two solid circles for the top rounded lobes of the heart
+    canvas.fillCircle(cx - r/2, cy - r/4, r/2 + 1, p.color);
+    canvas.fillCircle(cx + r/2, cy - r/4, r/2 + 1, p.color);
+    
+    // Draw a solid downward triangle to form the sharp bottom point
+    // Arguments: (x0, y0, x1, y1, x2, y2, color)
+    canvas.fillTriangle(cx - r, cy, cx + r, cy, cx, cy + r + 2, p.color);
+  } 
+  else if (p.type == SHIELD) {
+    // --- FILLED TACTICAL SHIELD POD ---
+    // Draw a solid rounded rectangle for a clean, chunky look
+    // Arguments: (x, y, width, height, corner_radius, color)
+    int width = r * 2;
+    int height = r * 2;
+    canvas.fillRoundRect(cx - r, cy - r, width, height, 3, p.color);
+    
+    // Give it an inner technological detail by stamping a black core crosshair
+    canvas.drawFastHLine(cx - r + 3, cy, (r * 2) - 6, ST7735_BLACK);
+    canvas.drawFastVLine(cx, cy - r + 3, (r * 2) - 6, ST7735_BLACK);
+  }
+}
+
+// Visual indicator for when the ship has an active shield bubble wrapped around it
+void drawShieldBubble(int sx, int sy) {
+  int cx = sx + (shipWidth / 2);
+  int cy = sy + (shipHeight / 2);
+  int shieldRadius = 14;
+
+  // Pulse effect: toggles every 80ms
+  if ((millis() / 80) % 2 == 0) {
+    // Draw two nested circles to create a thick, glowing 2-pixel wall
+    canvas.drawCircle(cx, cy, shieldRadius, ST7735_CYAN);
+    canvas.drawCircle(cx, cy, shieldRadius - 1, 0xCE7F); // Light blue/cyan mix
   }
 }
 
@@ -599,6 +677,7 @@ void loop() {
   static unsigned long lastFrame = 0;
   while (micros() - lastFrame < 16666) { delayMicroseconds(10); }
   lastFrame = micros();
+  bool uiNeedsUpdate = false;
 
   runAudioEngine();
 
@@ -612,9 +691,93 @@ void loop() {
   // Instead of clearing individual footprints, we clear the entire gameplay
   // arena (everything below the y=11 UI line) instantly in memory.
   canvas.fillRect(0, 11, screenWidth, screenHeight - 11, ST7735_BLACK);
-  
+
+  // --- 2.5. MANAGE POWER-UP TIMELINE ---
+  if (!activePowerUp.active && score >= POWERUP_START_SCORE && millis() >= nextPowerUpSpawnTime) {
+    
+    // Default rolling assumption: Player gets a shield item drop
+    PowerUpType rolledType = SHIELD;
+    uint16_t rolledColor = ST7735_CYAN;
+
+    // Roll a 100-sided percentage dice (0 to 99)
+    int probabilityDice = random(0, 100);
+
+    // GATE 1: Extra Life only drops if the dice lands on 0-19 (20% chance) 
+    // AND the current score milestone is equal to or greater than 1000!
+    if (probabilityDice < EXTRA_LIFE_CHANCE) {
+      if (score >= MIN_SCORE_FOR_EXTRA_LIFE) {
+        rolledType = EXTRA_LIFE;
+        rolledColor = ST7735_MAGENTA; // Heart Pink
+      } else {
+        // BACKUP COMPASSION SYSTEM: If score is under 1000, force it to morph
+        // into a Shield instead of wasting the item spawn window entirely!
+        rolledType = SHIELD;
+        rolledColor = ST7735_CYAN;
+      }
+    }
+
+    // Launch the power-up item drop onto the gameplay arena
+    activePowerUp.active = true;
+    activePowerUp.x = screenWidth + 20;
+    activePowerUp.y = random(20, screenHeight - 20);
+    activePowerUp.vx = -1.2; // Steady, slow retro drift vector
+    activePowerUp.type = rolledType;
+    activePowerUp.color = rolledColor;
+  }
+
+  // Move and render the active power-up container
+  if (activePowerUp.active) {
+    activePowerUp.x += activePowerUp.vx;
+    drawPowerUp(activePowerUp);
+
+    // Despawn safely if it drifts off the left side of the screen edge
+    if (activePowerUp.x + activePowerUp.radius < 0) {
+      activePowerUp.active = false;
+      // Pacing Buffer: Space out subsequent item arrivals by a wider 35 to 60 seconds
+      nextPowerUpSpawnTime = millis() + random(POWERUP_RND_SPWN_LOW, POWERUP_RND_SPWN_HIGH);
+    }
+
+    // --- CHECK FOR ITEM PICKUP COLLISION ---
+    // Forcing precise float casting prevents Arduino's min/max macros from miscalculating boundaries
+    float shipLeft   = (float)shipX;
+    float shipRight  = (float)(shipX + shipWidth);
+    float shipTop    = (float)shipY;
+    float shipBottom = (float)(shipY + shipHeight);
+
+    float distSqX = max(shipLeft, min(activePowerUp.x, shipRight));
+    float distSqY = max(shipTop,  min(activePowerUp.y, shipBottom));
+    
+    float deltaX = activePowerUp.x - distSqX;
+    float deltaY = activePowerUp.y - distSqY;
+    float distSq = (deltaX * deltaX) + (deltaY * deltaY);
+
+    // Explicitly check radius squaring against the distance matrix
+    if (distSq < (activePowerUp.radius * activePowerUp.radius)) {
+      if (activePowerUp.type == EXTRA_LIFE) {
+        lives++;
+        uiNeedsUpdate = true;
+        playSound(1500, 150); 
+      } 
+      else if (activePowerUp.type == SHIELD) {
+        shieldActive = true;
+        shieldEndTime = millis() + SHIELD_DURATION; // Gives you a solid 15 seconds of invulnerability
+        playSound(1000, 250); 
+      }
+      activePowerUp.active = false;
+      nextPowerUpSpawnTime = millis() + random(POWERUP_RND_SPWN_LOW, POWERUP_RND_SPWN_HIGH);
+    }
+  }
+  // --- CORE SHIELD RUNTIME & RENDERING ENGINES ---
+  if (shieldActive) {
+    if (millis() >= shieldEndTime) {
+      shieldActive = false;
+      playSound(300, 200); // Low-power warning buzz
+    } else {
+      // FORCE RENDER CALL: This draws the bubble around the ship's current location!
+      drawShieldBubble((int)shipX, shipY);
+    }
+  }
  // --- 3. UPDATE PHYSICS & RENDER HAZARDS ---
-  bool uiNeedsUpdate = false;
 
   for (int i = 0; i < MAX_ASTEROIDS; i++) {
     if (!pool[i].active) continue;
@@ -684,33 +847,39 @@ void loop() {
 
     // Collision detected!
     if (distanceSquared < ((pool[i].radius * 0.9) * (pool[i].radius * 0.9))) {
-      // 1. Run our clean explosion function
-      triggerShipExplosion();
-
-      lives--;
-      delay(300);
-      // Single-point flow control
-      if (lives <= 0) {
-
-        // Player is truly dead. Go to the final end sequence.
-        gameOverSequence(); 
-        // Break out of the ENTIRE loop, preventing any chance of mid-game reset
-        return; 
+      // CRITICAL DIRECTION CORRECTION: Check shield state BEFORE running death math!
+      if (shieldActive) {
+        // Shield is active! Completely ignore the impact and skip to the next asteroid
+        continue; 
       } else {
-        // Mid-game recovery (Lives > 0). Perform a clean board wipe.
-        tft.fillScreen(ST7735_BLACK);
-        drawUI();
-        
-        // This is where we safely reset the global flag!
-        cometOnScreen = false; 
+        // 1. Run our clean explosion function
+        triggerShipExplosion();
 
-        // Important: Use currentMaxActive, NOT MAX_ASTEROIDS, to ensure pool limits are respected
-        for (int j = 0; j < currentMaxActive; j++) {
-          pool[j].active = (j < currentMaxActive); // Reinforce active limit
-          resetAsteroid(j, true); // Force offscreen start
+        lives--;
+        delay(300);
+        // Single-point flow control
+        if (lives <= 0) {
+
+          // Player is truly dead. Go to the final end sequence.
+          gameOverSequence(); 
+          // Break out of the ENTIRE loop, preventing any chance of mid-game reset
+          return; 
+        } else {
+          // Mid-game recovery (Lives > 0). Perform a clean board wipe.
+          tft.fillScreen(ST7735_BLACK);
+          drawUI();
+          
+          // This is where we safely reset the global flag!
+          cometOnScreen = false; 
+
+          // Important: Use currentMaxActive, NOT MAX_ASTEROIDS, to ensure pool limits are respected
+          for (int j = 0; j < currentMaxActive; j++) {
+            pool[j].active = (j < currentMaxActive); // Reinforce active limit
+            resetAsteroid(j, true); // Force offscreen start
+          }
+          runCountdown();
+          return;
         }
-        runCountdown();
-        return;
       }
     }
 
