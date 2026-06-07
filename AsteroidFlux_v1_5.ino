@@ -242,7 +242,7 @@ void triggerShipExplosion() {
 
         // 5. Keep the precise timing block for raw PCM audio data streaming
         // This loops 320 times per frame to maintain the correct sample rate pitch
-        for (int sampleCount = 0; sampleCount < 320; sampleCount++) {
+        for (int sampleCount = 0; sampleCount < 260; sampleCount++) {
             if (audioPointer < sound_explosion_len) {
                 uint8_t audioSample = pgm_read_byte(&explosion_data[audioPointer++]);
                 sigmaDeltaWrite(GameConfig::PIN_SPEAKER, audioSample); 

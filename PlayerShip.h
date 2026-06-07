@@ -111,11 +111,29 @@ public:
             int cx = (int)_x + (GameConfig::SHIP_WIDTH / 2);
             int cy = _y + (GameConfig::SHIP_HEIGHT / 2);
             int shieldRadius = 14;
+
+            // Establish baseline safety colors
+            uint16_t primaryColor = ST7735_CYAN;
+            uint16_t secondaryColor = GameConfig::COLOR_ION_BLUE;
+
+            // Check if shield has entered the final 2-second timeout window
+            unsigned long timeLeft = (_shieldEndTime > millis()) ? (_shieldEndTime - millis()) : 0;
+            
+            if (timeLeft < 2000) {
+                // Flash rapidly between neon colors and critical RED warning states every 50ms
+                if ((millis() / 50) % 2 == 0) {
+                    primaryColor = ST7735_RED;
+                    secondaryColor = ST7735_ORANGE;
+                }
+            }
+
+            // Draw the double-ring animated energy shield bubble
             if ((millis() / 80) % 2 == 0) {
-                canvas.drawCircle(cx, cy, shieldRadius, ST7735_CYAN);
-                canvas.drawCircle(cx, cy, shieldRadius - 1, GameConfig::COLOR_ION_BLUE); 
+                canvas.drawCircle(cx, cy, shieldRadius, primaryColor);
+                canvas.drawCircle(cx, cy, shieldRadius - 1, secondaryColor); 
             }
         }
+        
         // Draw Base Ship Asset automatically using the private _frames matrix
         canvas.drawRGBBitmap((int)_x, _y, _frames[_currentFrame], GameConfig::SHIP_WIDTH, GameConfig::SHIP_HEIGHT);
     }

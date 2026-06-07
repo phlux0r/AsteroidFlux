@@ -215,6 +215,12 @@ public:
 
             if (distanceSquared < ((_pool[i].radius * 0.9f) * (_pool[i].radius * 0.9f))) {
                 if (ship.isShieldActive()) {
+                    // DYNAMIC PLASMA BURST: Shatter the asteroid into glowing cyan particles
+                    // We use the asteroid's current coordinates and match the density to its size
+                    float burstX = _pool[i].x;
+                    float burstY = _pool[i].y;
+                    particles.spawnExplosion(burstX, burstY, ST7735_CYAN, 20);
+                    // decativate shield and play sound
                     ship.deactivateShield();
                     audio.playSound(300, 200);
                     resetAsteroid(i, true);
