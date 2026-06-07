@@ -16,7 +16,7 @@ The project is built entirely on modern **Object-Oriented Programming (OOP)** pr
     * 🛡️ **Shield (Cyan Rounded Box):** Grants a temporary 10-second defensive energy bubble.
     * ❤️ **Extra Life (Magenta Heart):** Rewards an extra ship stock (unlocks at a 600+ score tier).
     * ⏱️ **Slow Speed (Green Clock):** Clocks back the surging global game speed by 3 full difficulty steps to give you breathing room.
-* **Dual-Engine Audio System:** Features background melody parsing paired with direct-memory execution loops that play retro PCM wave audio sequences for explosions and title cues without blocking gameplay frame rates.
+* **Dual-Engine Audio System:** Features melody parsing for startup, explosion and game end paired with direct-memory execution loops that play retro PCM wave audio sequences for explosions and title cues without blocking gameplay frame rates.
 * **Non-Volatile Storage (NVS):** Tracks and saves your lifetime **High Score Record** directly to the ESP32-S3's internal flash memory, persisting even after power loss.
 
 ---
