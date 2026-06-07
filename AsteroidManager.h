@@ -6,6 +6,7 @@
 #include "GameConfig.h"
 #include "PlayerShip.h"
 #include "AudioEngine.h"
+#include "ParticleManager.h"
 
 class AsteroidManager {
 private:
@@ -147,7 +148,8 @@ public:
         }
     }
 
-    void update(PlayerShip &ship, int &score, int &asteroidsPassed, int &nextTargetScore, bool &uiNeedsUpdate, bool &playerHit, AudioEngine &audio) {
+    void update(PlayerShip &ship, int &score, int &asteroidsPassed, int &nextTargetScore, 
+                bool &uiNeedsUpdate, bool &playerHit, AudioEngine &audio, ParticleManager &particles) {
         for (int i = 0; i < GameConfig::MAX_ASTEROIDS; i++) {
             if (!_pool[i].active) continue;
 
@@ -175,17 +177,22 @@ public:
                 _pool[i].vy = -_pool[i].vy;        
             }
 
-            if (_pool[i].x + _pool[i].radius + 12 < 0) {
+           if (_pool[i].x + _pool[i].radius + 12 < 0) {
                 if (_pool[i].isComet) {
                     score += GameConfig::COMET_BONUS_SCORE;
                     audio.playSound(1200, 100); 
+                    // Explode bright Magenta fragments on Comet pass!
+                    particles.spawnExplosion(0, _pool[i].y, ST7735_MAGENTA, 12);
                 } else {
                     score += _pool[i].sizeClass;
                     audio.playSound(800, 30);
+                    // Spawns smaller sparks matching the exact color of the asteroid size destroyed
+                    particles.spawnExplosion(0, _pool[i].y, _pool[i].color, 6);
                 }
                 
                 asteroidsPassed++;
                 uiNeedsUpdate = true;
+
 
                 if (asteroidsPassed >= nextTargetScore) {
                     if (_currentMaxActive < GameConfig::MAX_ASTEROIDS) {

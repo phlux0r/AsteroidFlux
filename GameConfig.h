@@ -43,6 +43,10 @@ struct GameConfig {
     static const int MAX_STARS              = 16;
     static constexpr float STAR_SCROLL_SPEED = 0.25f; // Moves much slower than your BASE_SPEED (1.1f)
 
+    // Particle parameters
+    static const int MAX_PARTICLES          = 30;  // Total size of the particle object pool
+    static const int PARTICLE_LIFESPAN_MS   = 400; // How long a fragment glows before burning out
+
     // Asset Animations
     static const int SHIP_ANIM_SPEED_MS      = 80;
     static const int SHIP_WIDTH              = 16;

@@ -10,6 +10,7 @@
 #include "PowerUpManager.h"
 #include "AsteroidManager.h"
 #include "BackgroundStars.h"
+#include "ParticleManager.h"
 
 // Binary Memory Assets
 #include "splash_image.h"
@@ -28,6 +29,7 @@ PlayerShip ship;
 PowerUpManager powerUps;
 AsteroidManager asteroids;
 BackgroundStars background;
+ParticleManager particles;
 
 // Shared Game Core State Variables
 int score = 0;
@@ -93,6 +95,7 @@ void loop() {
     // Run Engine Object Steps
     audio.update();
     background.update();
+    particles.update();
     ship.updatePosition();
     ship.updateAnimation();
     ship.updateShield();
@@ -101,9 +104,10 @@ void loop() {
     powerUps.update(score, ship, lives, uiNeedsUpdate, audio, asteroids);
 
     // Track Hazards Engine Math
-    asteroids.update(ship, score, asteroidsPassed, nextTargetScore, uiNeedsUpdate, playerHit, audio);
+    asteroids.update(ship, score, asteroidsPassed, nextTargetScore, uiNeedsUpdate, playerHit, audio, particles);
 
     if (playerHit) {
+        particles.clearAll();
         triggerShipExplosion();
         lives--;
         delay(300);
@@ -124,6 +128,7 @@ void loop() {
 
     // Draw Entities onto Virtual Buffer Frame
     background.render(canvas);
+    particles.render(canvas);
     powerUps.render(canvas);
     asteroids.render(canvas);
     ship.render(canvas);
@@ -143,6 +148,7 @@ void initNewGame() {
     nextTargetScore = GameConfig::SCORE_TO_SPAWN;
     ship.reset();
     powerUps.resetTimeline();
+    particles.clearAll();
     asteroids.initGame();
 
     tft.fillScreen(ST7735_BLACK);
