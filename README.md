@@ -57,6 +57,8 @@ AsteroidFlux/
 ├── explosion.h           # Raw 8-bit PCM audio array for ship destruction
 ├── gamestart.h           # Raw 8-bit PCM audio array for introduction cues
 └── gameend.h             # Raw 8-bit PCM audio array for game over sequences
+```
+---
 
 ## 💻 Compilation & Installation
 1. Prerequisites
@@ -65,30 +67,32 @@ Make sure you have the Arduino IDE (1.8.19 or 2.x) installed with the official E
 2. Required Libraries
 Install the following dependencies directly via the Arduino IDE Library Manager (Ctrl+Shift+I or Cmd+Shift+I):
 
-Adafruit GFX Library
-
-Adafruit ST7735 and ST7789 Library
+* Adafruit GFX Library
+* Adafruit ST7735 and ST7789 Library
 
 3. Build Settings
-Open AsteroidFlux_v1_5.ino.
 
-Go to Tools -> Board and select your target board (e.g., ESP32S3 Dev Module).
+* Open `AsteroidFlux_v1_5.ino`.
+* Go to Tools -> Board and select your target board (e.g., ESP32S3 Dev Module).
+* Ensure your upload port is selected under Tools -> Port.
+* Click Verify (Checkmark) to compile, and then Upload (Arrow) to flash the cabinet code onto your chip!
 
-Ensure your upload port is selected under Tools -> Port.
-
-Click Verify (Checkmark) to compile, and then Upload (Arrow) to flash the cabinet code onto your chip!
+---
 
 ## ⚙️ Customization & Balancing
 Want to make the game faster, change power-up rates, or test graphics? Simply open GameConfig.h and change the documented static values:
 
-```text
+```cpp
 // Example: Tweak these parameters to completely change the difficulty balance
 static const int MAX_ASTEROIDS           = 6;     // Max simultaneous hazards
 static constexpr float BASE_SPEED        = 1.1f;  // Starting movement speed
 static constexpr float SPEED_STEP        = 0.07f; // Difficulty increase per milestone
 static const int SHIELD_DURATION_MS      = 10000; // Shield lifespan
+```
 
-High Score Reset Trick: To completely wipe your system’s saved High Score record from the board's flash memory, twist and hold your dial all the way to its lowest position (near 0) while booting or resetting the device.
+**High Score Reset Trick:** To completely wipe your system’s saved High Score record from the board's flash memory, twist and hold your dial all the way to its lowest position (near 0) while booting or resetting the device.
+
+---
 
 ## 📄 License
 This project is open-source and free to modify or distribute for personal, hobby, and arcade build platforms.
