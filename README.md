@@ -13,9 +13,9 @@ The project is built entirely on modern **Object-Oriented Programming (OOP)** pr
 * **High-Velocity Comets:** Rare, fast-moving comets that challenge your reaction times but yield massive score rewards.
 * **Analog Precision Control:** Built to map native analog dial inputs through an exponential software filter for butter-smooth ship maneuvering.
 * **Dynamic Power-Up System:** Drops float through space using realistic 2D drift vectors and bounce off UI boundaries.
-    * 🛡️ **Shield (Cyan Rounded Box):** Grants a temporary 10-second defensive energy bubble.
-    * ❤️ **Extra Life (Magenta Heart):** Rewards an extra ship stock (unlocks at a 600+ score tier).
-    * ⏱️ **Slow Speed (Green Clock):** Clocks back the surging global game speed by 3 full difficulty steps to give you breathing room.
+    * 🛡️ **Shield (Green Rounded Box):** Grants a temporary 10-second defensive energy bubble that pops when you hit something.
+    * ❤️ **Extra Life (Magenta Heart):** Rewards an extra ship stock (unlocks at a 600+ score tier but doubles required score for each new spawn on pickup).
+    * ⏱️ **Slow Speed (Cyan Clock):** Clocks back the surging global game speed by 4 full difficulty steps to give you breathing room.
 * **Dual-Engine Audio System:** Features melody parsing for startup, explosion and game end paired with direct-memory execution loops that play retro PCM wave audio sequences for explosions and title cues without blocking gameplay frame rates.
 * **Non-Volatile Storage (NVS):** Tracks and saves your lifetime **High Score Record** directly to the ESP32-S3's internal flash memory, persisting even after power loss.
 
@@ -53,6 +53,8 @@ AsteroidFlux/
 ├── AsteroidManager.h     # Dynamic object-pooling, asteroid geometries, and collision math
 ├── PowerUpManager.h      # Random spawn engine, 2D drift physics, and pickup triggers
 ├── BackgroundStars.h     # Parallax background scrolling system
+├── ParticleManager.h     # Particle dispersion system
+├── NebulaManager.h       # Parallax nebula scrolling system
 ├── splash_image.h        # Hexadecimal full-screen title bitmap data
 ├── explosion.h           # Raw 8-bit PCM audio array for ship destruction
 ├── gamestart.h           # Raw 8-bit PCM audio array for introduction cues
