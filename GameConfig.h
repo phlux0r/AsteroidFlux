@@ -30,14 +30,14 @@ struct GameConfig {
     static const int POWERUP_START_SCORE     = 100;
     static const int MIN_SCORE_FOR_EXTRA_LIFE= 600;
     static const int SHIELD_DURATION_MS      = 10000;
-    static const int EXTRA_LIFE_CHANCE       = 35; // Out of 100
+    static const int EXTRA_LIFE_CHANCE       = 30; // Out of 100
     static const int POWERUP_SPAWN_LOW_MS    = 15000;
     static const int POWERUP_SPAWN_HIGH_MS   = 40000;
-    static const int SLOW_SPEED_CHANCE       = 15; // Out of 100
+    static const int SLOW_SPEED_CHANCE       = 60; // Out of 100
     static const uint16_t COLOR_SHIELD       = 0x07E0; // Pure Green
     static const uint16_t COLOR_HEALTH       = ST7735_MAGENTA;
     static const uint16_t COLOR_SLOW         = ST7735_CYAN;
-    static const int SPEED_STEPS_TO_REDUCE   = 3;
+    static const int SPEED_STEPS_TO_REDUCE   = 4;
 
     // Background stars
     static const int MAX_STARS              = 16;

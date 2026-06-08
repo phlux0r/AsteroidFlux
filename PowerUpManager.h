@@ -25,10 +25,13 @@ private:
 
     PowerUpData _data;
     unsigned long _nextSpawnTime;
+    // Track the moving target for the next extra life unlock
+    unsigned long _nextExtraLifeScore;
 
 public:
     PowerUpManager() {
         _data = {0, 0, 0, 0, 6.0f, NONE, false, 0};
+        _nextExtraLifeScore = GameConfig::MIN_SCORE_FOR_EXTRA_LIFE;
         resetTimeline();
     }
 
@@ -44,16 +47,18 @@ public:
 
             int probabilityDice = random(0, 100);
             
-            if (probabilityDice < GameConfig::EXTRA_LIFE_CHANCE) {
-                if (score >= GameConfig::MIN_SCORE_FOR_EXTRA_LIFE) {
-                    rolledType = EXTRA_LIFE;
-                    rolledColor = GameConfig::COLOR_HEALTH;
-                }
-            } 
+            if (probabilityDice < GameConfig::EXTRA_LIFE_CHANCE && score >= _nextExtraLifeScore) {
+                rolledType = EXTRA_LIFE;
+                rolledColor = GameConfig::COLOR_HEALTH;
+            }
             // Roll check for our brand new Slow Speed module
-            else if (probabilityDice < (GameConfig::EXTRA_LIFE_CHANCE + GameConfig::SLOW_SPEED_CHANCE)) {
-                rolledType = SLOW_SPEED;
-                rolledColor = GameConfig::COLOR_SLOW;
+            else {
+                // roll again
+                probabilityDice = random(0, 100);
+                if (probabilityDice < (GameConfig::SLOW_SPEED_CHANCE)) {
+                    rolledType = SLOW_SPEED;
+                    rolledColor = GameConfig::COLOR_SLOW;
+                }
             }
 
             _data.active = true;
@@ -106,6 +111,7 @@ public:
         if (distSq < (_data.radius * _data.radius)) {
             if (_data.type == EXTRA_LIFE) {
                 lives++;
+                _nextExtraLifeScore *= 2;
                 uiUpdate = true;
                 audio.playSound(1500, 150); 
             } 

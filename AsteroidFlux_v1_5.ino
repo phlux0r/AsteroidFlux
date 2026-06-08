@@ -2,6 +2,7 @@
 #include <Adafruit_ST7735.h> 
 #include <SPI.h>
 #include <Preferences.h>  
+#include <Fonts/TomThumb.h>
 
 // OOP Engine Modules
 #include "GameConfig.h"
@@ -45,6 +46,12 @@ const unsigned int sound_explosion_len = sizeof(explosion_data);
 const unsigned int sound_gamestart_len = sizeof(gamestart_data);
 const unsigned int sound_gameend_len = sizeof(gameend_data);
 
+enum AttractScreen { SCREEN_SPLASH, SCREEN_INFO };
+AttractScreen currentAttractScreen = SCREEN_SPLASH;
+
+unsigned long lastScreenSwitchTime = 0;
+const unsigned long ATTRACT_SLIDE_DURATION = 8000; // Switch screens every 8 seconds (8000ms)
+
 // Forward Control Loop Declarations
 void initNewGame();
 void drawUI();
@@ -83,6 +90,7 @@ void setup() {
     highScore = preferences.getInt("highscore", 0);
     
     showWelcomeSplashScreen();
+    waitForPlayerInput();
     initNewGame();
 }
 
@@ -170,7 +178,7 @@ void showWelcomeSplashScreen() {
     }
 
     tft.setTextSize(1);
-    tft.setCursor(GameConfig::SCREEN_WIDTH / 4, 94);
+    tft.setCursor(GameConfig::SCREEN_WIDTH / 4 - 4, 94);
     tft.setTextColor(GameConfig::COLOR_GREY); 
     tft.print("BEST RECORD: ");
     tft.setTextColor(ST7735_YELLOW);
@@ -179,11 +187,71 @@ void showWelcomeSplashScreen() {
     tft.setCursor(18, 115);
     tft.setTextColor(ST7735_CYAN);
     tft.print("MOVE CONTROL TO START");
-    
-    //audio.playSample(gamestart_data, sound_gamestart_len);
-    audio.playStartupMelody();
+}
 
-    waitForPlayerInput();
+void drawInfoScreen() {
+    tft.fillScreen(ST7735_BLACK);
+    
+    // 1. Activate the tiny custom font
+    tft.setFont(&TomThumb);
+
+    // Header text
+    tft.setTextSize(1);
+    tft.setTextColor(ST7735_WHITE);
+    tft.setCursor(30, 10);
+    tft.print("---== GAME REWARDS ==---");
+
+    // 1. HAZARDS & SCORING BREAKDOWN
+    tft.setTextColor(ST7735_YELLOW);
+    tft.setCursor(15, 25);  tft.print("TINY:       +1 PTS");
+    
+    tft.setTextColor(ST7735_CYAN);
+    tft.setCursor(95, 25);  tft.print("SMALL: +2 PTS");
+    
+    tft.setTextColor(ST7735_ORANGE);
+    tft.setCursor(15, 35);  tft.print("MEDIUM:   +3 PTS");
+    
+    tft.setTextColor(ST7735_RED);
+    tft.setCursor(95, 35);  tft.print("LARGE: +4 PTS");
+    
+    tft.setTextColor(ST7735_BLUE);
+    tft.setCursor(15, 45);  tft.print("MASSIVE: +5 PTS");
+
+    tft.setTextColor(ST7735_MAGENTA);
+    tft.setCursor(95, 45);  tft.print("COMET: +15 PTS");
+
+    tft.drawFastHLine(0, 55, GameConfig::SCREEN_WIDTH, 0x4208); // Subtle dark divider line
+
+    // 2. POWER-UPS MATRIX
+    tft.setCursor(40, 70);
+    tft.setTextColor(ST7735_WHITE);
+    tft.print("---== POWERUPS ==---");
+
+    // Cyan Clock
+    tft.setTextColor(ST7735_CYAN);
+    tft.setCursor(5, 85);   tft.print("CLOCK:    ");
+    tft.setTextColor(ST7735_WHITE);
+    tft.print("SLOWS DOWN SECTOR");
+
+    // Green Shield
+    tft.setTextColor(ST7735_GREEN);
+    tft.setCursor(5, 95);  tft.print("SHIELD:  ");
+    tft.setTextColor(ST7735_WHITE);
+    tft.print("ABSORBS 1 COLLISION - ON 10 SEC");
+
+    // Red Health
+    tft.setTextColor(ST7735_RED);
+    tft.setCursor(5, 105);  tft.print("HEART:    ");
+    tft.setTextColor(ST7735_WHITE);
+    tft.print("EXTRA LIFE!! - AFTER 600 PTS");
+
+    tft.setFont();
+
+    // Footer Prompts
+    tft.setTextColor(0x5AEB); // Retro arcade dimmed green
+    tft.setCursor(14, 120);
+    tft.print("MOVE CONTROLLER TO FLY");
+    // Restore the default font before drawing your main UI or Title screen
 }
 
 void drawUI() {
@@ -276,13 +344,12 @@ void gameOverSequence() {
         preferences.putInt("highscore", highScore);
     }
 
-    tft.setCursor(GameConfig::SCREEN_WIDTH / 4 - 5, 15);
+    tft.setCursor(GameConfig::SCREEN_WIDTH / 4 - 12, 15);
     tft.setTextColor(ST7735_RED); 
     tft.setTextSize(2);
     tft.print("GAME OVER");
 
     //audio.playSample(gameend_data, sound_gameend_len);
-    audio.playGameOverMelody();
 
     tft.setTextSize(1);
     tft.setCursor(GameConfig::SCREEN_WIDTH / 4, 45);
@@ -301,9 +368,11 @@ void gameOverSequence() {
         tft.print(highScore);
     }
 
-    tft.setCursor(GameConfig::SCREEN_WIDTH / 4 - 20, 95);
+    tft.setCursor(GameConfig::SCREEN_WIDTH / 4 - 28, 95);
     tft.setTextColor(ST7735_CYAN);
     tft.print("> TWIST DIAL TO RESET <");
+
+    audio.playGameOverMelody();
 
     waitForPlayerInput();
     showWelcomeSplashScreen();
@@ -311,15 +380,51 @@ void gameOverSequence() {
 }
 
 void waitForPlayerInput() {
+    // 1. Capture the initial position of the dial right at bootup
     int startingValue = analogRead(GameConfig::PIN_DIAL);
     const int threshold = 150; 
-    
+
+    unsigned long lastScreenSwitchTime = millis();
+    const unsigned long ATTRACT_SLIDE_DURATION = 8000; // 8 seconds per slide
+    currentAttractScreen = SCREEN_SPLASH;
+
+    // 2. Play the crisp startup fanfare exactly once right when the boot menu mounts
+    audio.playStartupMelody();
+
     while (true) {
+        // Keep the audio engine updated if any background alerts are ticking
         audio.update();
-        delay(1);
+
+        // 3. INPUT INTERCEPTOR: Read the dial's current position
         int currentValue = analogRead(GameConfig::PIN_DIAL);
-        if (abs(currentValue - startingValue) > threshold) break;
+        
+        // If the player spins the dial past your threshold, break out and start the game!
+        if (abs(currentValue - startingValue) > threshold) {
+            break;
+        }
+
+        // 4. SLIDE SLIDESHOW TRANSITION TIMER
+        if (millis() - lastScreenSwitchTime >= ATTRACT_SLIDE_DURATION) {
+            lastScreenSwitchTime = millis(); // Reset stopwatch
+
+            if (currentAttractScreen == SCREEN_SPLASH) {
+                currentAttractScreen = SCREEN_INFO;
+                drawInfoScreen(); // Draws the point matrix and systems gear layout
+            } else {
+                currentAttractScreen = SCREEN_SPLASH;
+                showWelcomeSplashScreen(); // Redraws your custom bitmap asset
+            }
+            
+            // CRITICAL DIAL ADJUSTMENT: Re-sample the dial baseline right after a screen swap.
+            // This prevents a slow drift or past movement from instantly triggering a false game start
+            // the exact millisecond a new slide loads.
+            startingValue = analogRead(GameConfig::PIN_DIAL);
+        }
+
+        // Maintained your 16ms frame-pacing delay to match original timing
         delay(16); 
     }
+
+    // Cleanly mute everything before entering the core game loop
     audio.mute();
 }
