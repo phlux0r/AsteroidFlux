@@ -9,8 +9,9 @@
 #include "PlayerShip.h"
 #include "PowerUpManager.h"
 #include "AsteroidManager.h"
-#include "BackgroundStars.h"
 #include "ParticleManager.h"
+#include "BackgroundStars.h"
+#include "NebulaManager.h"
 
 // Binary Memory Assets
 #include "splash_image.h"
@@ -29,6 +30,7 @@ PlayerShip ship;
 PowerUpManager powerUps;
 AsteroidManager asteroids;
 BackgroundStars background;
+NebulaManager nebula;
 ParticleManager particles;
 
 // Shared Game Core State Variables
@@ -94,6 +96,7 @@ void loop() {
 
     // Run Engine Object Steps
     audio.update();
+    nebula.update();
     background.update();
     particles.update();
     ship.updatePosition();
@@ -127,6 +130,7 @@ void loop() {
     canvas.fillRect(0, GameConfig::UI_MARGIN_TOP, GameConfig::SCREEN_WIDTH, GameConfig::SCREEN_HEIGHT - GameConfig::UI_MARGIN_TOP, ST7735_BLACK);
 
     // Draw Entities onto Virtual Buffer Frame
+    nebula.render(canvas);
     background.render(canvas);
     particles.render(canvas);
     powerUps.render(canvas);
@@ -176,7 +180,9 @@ void showWelcomeSplashScreen() {
     tft.setTextColor(ST7735_CYAN);
     tft.print("MOVE CONTROL TO START");
     
-    audio.playSample(gamestart_data, sound_gamestart_len);
+    //audio.playSample(gamestart_data, sound_gamestart_len);
+    audio.playStartupMelody();
+
     waitForPlayerInput();
 }
 
@@ -275,7 +281,8 @@ void gameOverSequence() {
     tft.setTextSize(2);
     tft.print("GAME OVER");
 
-    audio.playSample(gameend_data, sound_gameend_len);
+    //audio.playSample(gameend_data, sound_gameend_len);
+    audio.playGameOverMelody();
 
     tft.setTextSize(1);
     tft.setCursor(GameConfig::SCREEN_WIDTH / 4, 45);

@@ -48,7 +48,43 @@ public:
         _melodyPlaying = true;
         _nextNoteTime = 0; 
     }
+    
+    // 14-Note Retro Arcade Upbeat Startup Fanfare
+    void playStartupMelody() {
+        // Frequency values in Hz
+        int notes[]    = { 262, 330, 392, 523, 392, 523, 659, 784, 659, 784, 1047, 784, 1047, 1318 };
+        int duration[] = { 100, 100, 100, 120,  80,  80,  80, 150,  80,  80,   80,  80,   80,  300 };
 
+        for (int i = 0; i < 14; i++) {
+            playSound(notes[i], duration[i]);
+            delay(duration[i] * 1.15); // Short articulation gap between notes
+        }
+        mute();
+    }
+
+    // 13-Note Ominous Descending Game-Over Theme
+    void playGameOverMelody() {
+        int notes[]    = { 392, 370, 349, 311, 294, 277, 262, 246, 220, 196, 174, 146, 110 };
+        int duration[] = { 150, 150, 150, 300, 150, 150, 150, 300, 200, 200, 200, 300, 500 };
+
+        for (int i = 0; i < 13; i++) {
+            playSound(notes[i], duration[i]);
+            delay(duration[i] * 1.10);
+        }
+        mute();
+    }
+
+    // 3-Note Bass Dive Explosion Chain (low notes lowering sequentially)
+    void playExplosionSequence() {
+        int notes[]    = { 150, 100, 60 };
+        int duration[] = { 80,  100, 150 };
+
+        for (int i = 0; i < 3; i++) {
+            playSound(notes[i], duration[i]);
+            delay(duration[i]); // Continuous bass transitions
+        }
+        mute();
+    }
     void update() {
         if (_soundActive) {
             if (millis() >= _soundEndTime) {

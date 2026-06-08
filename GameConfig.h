@@ -43,6 +43,10 @@ struct GameConfig {
     static const int MAX_STARS              = 16;
     static constexpr float STAR_SCROLL_SPEED = 0.25f; // Moves much slower than your BASE_SPEED (1.1f)
 
+    // Nebula clouds
+    static constexpr float NEBULA_SCROLL_SPEED = 0.05f;
+    static const uint16_t COLOR_NEBULA     = 0x2087;
+
     // Particle parameters
     static const int MAX_PARTICLES          = 30;  // Total size of the particle object pool
     static const int PARTICLE_LIFESPAN_MS   = 600; // How long a fragment glows before burning out
