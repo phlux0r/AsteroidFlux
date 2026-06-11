@@ -192,14 +192,17 @@ void showWelcomeSplashScreen() {
 void drawInfoScreen() {
     tft.fillScreen(ST7735_BLACK);
     
-    // 1. Activate the tiny custom font
-    tft.setFont(&TomThumb);
-
     // Header text
     tft.setTextSize(1);
     tft.setTextColor(ST7735_WHITE);
-    tft.setCursor(30, 10);
+    tft.setCursor(8, 6);
     tft.print("---== GAME REWARDS ==---");
+    tft.setCursor(20, 64);
+    tft.print("---== POWERUPS ==---");
+
+    // Activate the tiny custom font
+    tft.setFont(&TomThumb);
+    tft.setTextSize(1);
 
     // 1. HAZARDS & SCORING BREAKDOWN
     tft.setTextColor(ST7735_YELLOW);
@@ -223,10 +226,6 @@ void drawInfoScreen() {
     tft.drawFastHLine(0, 55, GameConfig::SCREEN_WIDTH, 0x4208); // Subtle dark divider line
 
     // 2. POWER-UPS MATRIX
-    tft.setCursor(40, 70);
-    tft.setTextColor(ST7735_WHITE);
-    tft.print("---== POWERUPS ==---");
-
     // Cyan Clock
     tft.setTextColor(ST7735_CYAN);
     tft.setCursor(5, 85);   tft.print("CLOCK:    ");
